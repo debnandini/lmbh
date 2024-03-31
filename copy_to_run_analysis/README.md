@@ -1,13 +1,3 @@
-this code base is built on https://github.com/eXtremeGravityInstitute/LISA-Massive-Black-Hole originally forked at https://github.com/debnandini/LISA-Massive-Black-Hole.
-running the Cythonized lmbh code:
-1. to create cython binding, use files in making_cython_so and follow instructions in commands_cython.sh
-2. to run the analysis with galactic binaries (gb), do nohup lmbh_main_withgb -segment-start 0 -segment-stop 0 -Pseg 0 -source 0 -days 60.0 >> lmbh_0_0.out & for source 0 in 0th segment of 60 days
-3. use lmbh_main_nogbgb for no gb case
-4. use the run_* directories for no cython binding workflows 
-
-
-The details of the former workflow from LISA massive black hole code is below:
-
 # Sangria
 
 The first step is to read in the Sangria data and dump it to ASCII file. The code segmentSangria.c does this. It also produces a collection of shorter segments for the search code and outputs the data in both the time and frequency domain

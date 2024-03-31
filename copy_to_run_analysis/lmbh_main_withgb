@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+#nohup ./lmbh_new -i 0 -f 0 -p 0 -o 0 -d 60.0 >> ptmcmc_0_0.out &
+from optparse import OptionParser
+import subprocess
+import sys
+import os
+import pySpecFit
+#import pySpecAverage
+#import pysearch
+#import pyunique
+import pyPTMCMC
+import numpy as np
+import time
+def parse_command_line():
+	parser = OptionParser(
+	)
+	#parser.add_option("-s", "--segments", type = "int", help = "number of segments to compute psd for (not segment number).(Use 1 for non segmented data)")
+	parser.add_option("-i", "--segment-start", type = "int", help = "segment to start analysis from (provide segment numbers 0-11). (Use 0 for non segmented data)")
+	parser.add_option("-f", "--segment-end", type = "int", help = "segment to end analysis at. (Use 0 for non segmented data)")
+	parser.add_option("-p", "--Pseg", type = "int", help = "segment to run PTMCMC on. Use -1 to run over full data set")
+	parser.add_option("-o", "--source", type = "int", help = "source number to run PTMCMC on. Note: Sangria training data has 15 unique sources numbered 0 to 14")
+	parser.add_option("-d", "--days", type = "float", help = "number of days in each segment")
+	parser.add_option("-v", "--verbose", action = "store_true", help = "Be verbose.")
+
+	options, filenames = parser.parse_args()
+	return options, filenames
+
+#
+# =============================================================================
+#
+#                                     Main
+#
+# =============================================================================
+#
+
+
+#
+# parse command line
+#
+
+
+options, filenames = parse_command_line()
+#seg = options.segments
+st = options.segment_start
+se = options.segment_end
+pseg = options.Pseg
+source = options.source
+days = options.days
+
+#print (seg, st, se, pseg, source) #REMOVE
+
+# make segments
+t1=time.perf_counter()
+print("TIME CHECK: STARTING SEGMENTS", t1)
+subprocess.call(["gcc", "segmentSangria_mod_changefft.c", "-osegmentSangria_mod_changefft", "-lhdf5", "-lgsl", "-O3"])
+subprocess.call(["./segmentSangria_mod_changefft", str(days)])
+t2=time.perf_counter()
+print("TIME CHECK: SEGMENTS MADE IN", t2-t1)
+
+# psd estimate
+t1=time.perf_counter()
+print("TIME CHECK: STARTING PSD", t1)
+seg = np.arange(st,se+1,1)
+
+#for j in seg:
+#	for i in range(2):
+#		print(j,i)
+#		pySpecFit.py_main_gut(b"AET_seg%d_t.dat"%(j), i)
+#		os.rename('specfit.dat', 'specfit_%d_%d.dat'%(i,j))
+#		subprocess.call(["gnuplot", "Qscan.gnu"])
+#		os.rename('Qscan.png', 'Qscan_%d_%d.png'%(i,j))
+
+for j in seg:
+	for i in range(2):
+		file="AET_seg%d_t.dat"%(j)
+		subprocess.call(["./SpecFit_c", file, str(i)])
+		os.rename('specfit.dat', 'specfit_%d_%d.dat'%(i,j))
+		subprocess.call(["gnuplot", "Qscan.gnu"])
+		os.rename('Qscan.png', 'Qscan_%d_%d.png'%(i,j))
+t2=time.perf_counter()
+print("TIME CHECK: PSD ESTIMATED IN", t2-t1)
+
+# average and interpolate psd
+
+#pySpecAverage.py_main()
+
+# search
+
+#pysearch.py_main_gut(st, se)
+
+# select signals with snr > 12
+
+#pyunique.py_main()
+
+# PTMCMC
+data = np.loadtxt("specfit_0_0.dat", delimiter=' ')
+f = np.array(data[:,0])
+tseg = round(1/f[1])
+t1=time.perf_counter()
+print("TIME CHECK: STARTING PTMCMC", t1)
+
+pyPTMCMC.py_main_gut(pseg, source, tseg)
+t2=time.perf_counter()
+print("TIME CHECK: PTMCMC DONE IN", t2-t1)
+
+
+
